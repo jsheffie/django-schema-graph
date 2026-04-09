@@ -16,7 +16,7 @@ const makeGroupNode = (group) => {
   }
 };
 
-const makeNode = (node, background, border, nodeModifiers) => {
+const makeNode = (node, background, border, nodeModifiers, isExpanded, pinnedPos) => {
   let title = `
     <dl style="display: grid; grid-template-columns: auto auto; grid-auto-columns: 1fr; gap: 5px .5em; align-items: baseline;">
       <dt style="text-align: right">name:</dt>
@@ -36,15 +36,51 @@ const makeNode = (node, background, border, nodeModifiers) => {
     title += '</dd>';
   }
   title += '</dl>';
+
+  let label = node.name;
+  let shape = undefined;
+  let font = undefined;
+
+  if (isExpanded && node.fields && node.fields.length) {
+    const nonRelation = node.fields.filter(f => !f.is_relation);
+    const relation = node.fields.filter(f => f.is_relation);
+    const allFields = node.fields;
+    const maxNameLen = Math.max(...allFields.map(f => f.name.length));
+    const col1 = maxNameLen + 2;
+
+    const renderField = f => `${f.name.padEnd(col1)}${f.type}`;
+    const dividerLen = Math.max(
+      node.name.length,
+      ...allFields.map(f => col1 + f.type.length)
+    );
+    const divider = '\u2500'.repeat(dividerLen);
+
+    let sections = [`${node.name}\n${divider}`];
+    if (nonRelation.length) sections.push(nonRelation.map(renderField).join('\n'));
+    if (relation.length) {
+      if (nonRelation.length) sections.push(divider);
+      sections.push(relation.map(renderField).join('\n'));
+    }
+
+    label = sections.join('\n');
+    shape = 'box';
+    font = { face: 'monospace', size: 11, align: 'left' };
+  }
+
   let nodeData = {
     id: node.id,
-    label: node.name,
-    title: title,
-    color: {
-      background,
-      border,
-    },
+    label,
+    title,
+    color: { background, border },
+  };
+  if (shape) nodeData.shape = shape;
+  if (font) nodeData.font = font;
+  if (pinnedPos) {
+    nodeData.x = pinnedPos.x;
+    nodeData.y = pinnedPos.y;
+    nodeData.physics = false;
   }
+
   _.merge(nodeData, ...node.tags.map((tag) => nodeModifiers[tag]));
   return nodeData;
 };
@@ -54,6 +90,19 @@ const makeNodeEdge = (edge, edgeModifiers) => {
     from: edge.source,
     to: edge.target,
   };
+  if (edge.label) {
+    edgeData.label = edge.label;
+    edgeData.font = { size: 10, align: 'middle' };
+  }
+  // Hover tooltip
+  const type = edge.tags.length ? edge.tags.join(', ') : '';
+  let tooltip = `<dl style="display: grid; grid-template-columns: auto auto; gap: 3px .5em;">`;
+  if (type) tooltip += `<dt>type:</dt><dd><code>${type}</code></dd>`;
+  if (edge.label) tooltip += `<dt>field:</dt><dd><code>${edge.label}</code></dd>`;
+  if (edge.related_name) tooltip += `<dt>reverse:</dt><dd><code>${edge.related_name}</code></dd>`;
+  tooltip += '</dl>';
+  edgeData.title = tooltip;
+
   _.merge(edgeData, ...edge.tags.map((tag) => edgeModifiers[tag]));
   return edgeData;
 };
@@ -76,6 +125,8 @@ export default {
   activeNodeIDs: new Set(),
   activeGroupIDs: new Set(),
   collapsedGroupIDs: new Set(),
+  expandedFieldNodeIDs: new Set(),
+  pinnedNodes: {},
 
   // Toolbar.
   showAll: function () {
@@ -96,6 +147,32 @@ export default {
     Object.keys(this.allGroups).map((groupID) => {
       this.collapsedGroupIDs.add(groupID)
     });
+    this.update();
+  },
+
+  // Field expansion.
+  toggleNodeFields: function (nodeID) {
+    if (this.expandedFieldNodeIDs.has(nodeID)) {
+      this.expandedFieldNodeIDs.delete(nodeID);
+    } else {
+      this.expandedFieldNodeIDs.add(nodeID);
+    }
+    this.update();
+  },
+  expandAllFields: function () {
+    Object.keys(this.allNodes).forEach((nodeID) => {
+      this.expandedFieldNodeIDs.add(nodeID);
+    });
+    this.update();
+  },
+  collapseAllFields: function () {
+    this.expandedFieldNodeIDs.clear();
+    this.update();
+  },
+
+  // Pin node at a fixed position (after drag).
+  pinNode: function (nodeID, x, y) {
+    this.pinnedNodes[nodeID] = { x, y };
     this.update();
   },
 
@@ -127,6 +204,33 @@ export default {
     this.update();
   },
 
+  // Config export / import.
+  getConfig: function () {
+    return {
+      activeNodes: [...this.activeNodeIDs],
+      activeGroups: [...this.activeGroupIDs],
+      collapsedGroups: [...this.collapsedGroupIDs],
+      expandedFields: [...this.expandedFieldNodeIDs],
+      pinnedNodes: { ...this.pinnedNodes },
+    };
+  },
+  applyConfig: function (config) {
+    this.activeNodeIDs = new Set(config.activeNodes || []);
+    this.activeGroupIDs = new Set(config.activeGroups || []);
+    this.collapsedGroupIDs = new Set(config.collapsedGroups || []);
+    this.expandedFieldNodeIDs = new Set(config.expandedFields || []);
+    this.pinnedNodes = { ...(config.pinnedNodes || {}) };
+    this.update();
+  },
+  resetConfig: function () {
+    this.activeNodeIDs = new Set(Object.keys(this.allNodes));
+    this.activeGroupIDs = new Set(Object.keys(this.allGroups));
+    this.collapsedGroupIDs.clear();
+    this.expandedFieldNodeIDs.clear();
+    this.pinnedNodes = {};
+    this.update();
+  },
+
   // State queries.
   isNodeEnabled: function (nodeID) {
     let node = this.allNodes[nodeID];
@@ -154,7 +258,7 @@ export default {
       if (this.isNodeEnabled(nodeID)) {
         let group = this.allGroups[node.group];
         this.nodes.push(
-          makeNode(node, group.softColor, group.hardColor, this.nodeModifiers)
+          makeNode(node, group.softColor, group.hardColor, this.nodeModifiers, this.expandedFieldNodeIDs.has(nodeID), this.pinnedNodes[nodeID])
         );
       }
     });
