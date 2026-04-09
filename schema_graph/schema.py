@@ -78,7 +78,8 @@ class Edge:
             return None
         model_id = get_model_id(model)
         related_model_id = get_model_id(related_model)
-        rqn = field.related_query_name()
+        rqn_fn = getattr(field, "related_query_name", None)
+        rqn = rqn_fn() if callable(rqn_fn) else ""
         label = "" if rqn == "+" else rqn
         # Foreign key
         if field.many_to_one:
