@@ -9,6 +9,5 @@
 build
 dist
 node_modules
-schema_graph/static/schema_graph/main.js
 poetry.lock
 .claude
