@@ -53,6 +53,7 @@ class Edge:
     target: str
     tags: tuple[str, ...] = ()
     label: str = ""
+    related_name: str = ""
 
     @classmethod
     def proxy(cls, child: type[models.Model], parent: type[models.Model]) -> Edge:
@@ -80,13 +81,14 @@ class Edge:
         related_model_id = get_model_id(related_model)
         rqn_fn = getattr(field, "related_query_name", None)
         rqn = rqn_fn() if callable(rqn_fn) else ""
-        label = "" if rqn == "+" else rqn
+        related_name = "" if rqn == "+" else rqn
+        label = field.name
         # Foreign key
         if field.many_to_one:
-            return cls(model_id, related_model_id, tags=("foreign-key",), label=label)
+            return cls(model_id, related_model_id, tags=("foreign-key",), label=label, related_name=related_name)
         # One to one
         elif field.one_to_one and not field.auto_created:
-            return cls(model_id, related_model_id, tags=("one-to-one",), label=label)
+            return cls(model_id, related_model_id, tags=("one-to-one",), label=label, related_name=related_name)
         # Many-to-many
         elif field.many_to_many and not field.auto_created:
             through_model = getattr(model, field.name).through
@@ -94,7 +96,7 @@ class Edge:
             # This stops us from creating two sets of connections (because the
             # connections will be created by the FK fields on the through model).
             if through_model._meta.auto_created:
-                return cls(model_id, related_model_id, tags=("many-to-many",), label=label)
+                return cls(model_id, related_model_id, tags=("many-to-many",), label=label, related_name=related_name)
 
 
 @attrs.frozen(order=True)

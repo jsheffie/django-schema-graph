@@ -94,6 +94,15 @@ const makeNodeEdge = (edge, edgeModifiers) => {
     edgeData.label = edge.label;
     edgeData.font = { size: 10, align: 'middle' };
   }
+  // Hover tooltip
+  const type = edge.tags.length ? edge.tags.join(', ') : '';
+  let tooltip = `<dl style="display: grid; grid-template-columns: auto auto; gap: 3px .5em;">`;
+  if (type) tooltip += `<dt>type:</dt><dd><code>${type}</code></dd>`;
+  if (edge.label) tooltip += `<dt>field:</dt><dd><code>${edge.label}</code></dd>`;
+  if (edge.related_name) tooltip += `<dt>reverse:</dt><dd><code>${edge.related_name}</code></dd>`;
+  tooltip += '</dl>';
+  edgeData.title = tooltip;
+
   _.merge(edgeData, ...edge.tags.map((tag) => edgeModifiers[tag]));
   return edgeData;
 };
