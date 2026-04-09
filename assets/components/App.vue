@@ -4,9 +4,11 @@
       :loaded=loaded
     />
     <Graph
+      ref="graph"
       class="graph"
       :completeLoad=completeLoad
       @node-click="onNodeClick"
+      @node-dragged="onNodeDragged"
     />
     <vue-progress-bar></vue-progress-bar>
   </v-app>
@@ -50,6 +52,10 @@ export default {
     },
     onNodeClick: function(nodeID) {
       graphData.toggleNodeFields(nodeID);
+      this.$nextTick(() => this.$refs.graph.restabilize());
+    },
+    onNodeDragged: function({ nodeId, x, y }) {
+      graphData.pinNode(nodeId, x, y);
     },
   },
   data() {

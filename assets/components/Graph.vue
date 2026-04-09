@@ -1,11 +1,13 @@
 <template>
   <network
+    ref="visNetwork"
     :nodes=graphData.nodes
     :edges=graphData.edges
     :options=options
     @stabilization-progress="stabilizationProgress"
     @stabilization-iterations-done="stabilizationIterationsDone"
     @click="onNetworkClick"
+    @drag-end="onDragEnd"
   />
 </template>
 
@@ -47,6 +49,22 @@ export default {
       if (event.nodes && event.nodes.length === 1) {
         this.$emit('node-click', event.nodes[0]);
       }
+    },
+    onDragEnd: function (event) {
+      if (event.nodes && event.nodes.length > 0) {
+        const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
+        if (net) {
+          const positions = net.getPositions(event.nodes);
+          event.nodes.forEach(nodeId => {
+            const pos = positions[nodeId];
+            if (pos) this.$emit('node-dragged', { nodeId, x: pos.x, y: pos.y });
+          });
+        }
+      }
+    },
+    restabilize: function () {
+      const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
+      if (net) net.stabilize(150);
     },
   },
 };

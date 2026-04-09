@@ -11,6 +11,7 @@ from django.db import models
 class Field:
     name: str
     type: str
+    is_relation: bool = False
 
 
 @attrs.frozen(order=True)
@@ -29,9 +30,13 @@ class Node:
         if model._meta.abstract:
             tags.append("abstract")
         fields = tuple(
-            Field(name=f.name, type=type(f).__name__)
+            Field(
+                name=f.name,
+                type=type(f).__name__,
+                is_relation=getattr(f, "is_relation", False),
+            )
             for f in model._meta.get_fields()
-            if not f.is_relation and hasattr(f, "name")
+            if hasattr(f, "name") and not getattr(f, "auto_created", False)
         )
         return cls(
             id=get_model_id(model),
@@ -47,6 +52,7 @@ class Edge:
     source: str
     target: str
     tags: tuple[str, ...] = ()
+    label: str = ""
 
     @classmethod
     def proxy(cls, child: type[models.Model], parent: type[models.Model]) -> Edge:
@@ -72,12 +78,14 @@ class Edge:
             return None
         model_id = get_model_id(model)
         related_model_id = get_model_id(related_model)
+        rqn = field.related_query_name()
+        label = "" if rqn == "+" else rqn
         # Foreign key
         if field.many_to_one:
-            return cls(model_id, related_model_id, tags=("foreign-key",))
+            return cls(model_id, related_model_id, tags=("foreign-key",), label=label)
         # One to one
         elif field.one_to_one and not field.auto_created:
-            return cls(model_id, related_model_id, tags=("one-to-one",))
+            return cls(model_id, related_model_id, tags=("one-to-one",), label=label)
         # Many-to-many
         elif field.many_to_many and not field.auto_created:
             through_model = getattr(model, field.name).through
@@ -85,7 +93,7 @@ class Edge:
             # This stops us from creating two sets of connections (because the
             # connections will be created by the FK fields on the through model).
             if through_model._meta.auto_created:
-                return cls(model_id, related_model_id, tags=("many-to-many",))
+                return cls(model_id, related_model_id, tags=("many-to-many",), label=label)
 
 
 @attrs.frozen(order=True)

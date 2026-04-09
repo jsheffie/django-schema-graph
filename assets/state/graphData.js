@@ -16,7 +16,7 @@ const makeGroupNode = (group) => {
   }
 };
 
-const makeNode = (node, background, border, nodeModifiers, isExpanded) => {
+const makeNode = (node, background, border, nodeModifiers, isExpanded, pinnedPos) => {
   let title = `
     <dl style="display: grid; grid-template-columns: auto auto; grid-auto-columns: 1fr; gap: 5px .5em; align-items: baseline;">
       <dt style="text-align: right">name:</dt>
@@ -42,15 +42,29 @@ const makeNode = (node, background, border, nodeModifiers, isExpanded) => {
   let font = undefined;
 
   if (isExpanded && node.fields && node.fields.length) {
-    const fieldLines = node.fields.map(f => `${f.name}  ${f.type}`).join('\n');
+    const nonRelation = node.fields.filter(f => !f.is_relation);
+    const relation = node.fields.filter(f => f.is_relation);
+    const allFields = node.fields;
+    const maxNameLen = Math.max(...allFields.map(f => f.name.length));
+    const col1 = maxNameLen + 2;
+
+    const renderField = f => `${f.name.padEnd(col1)}${f.type}`;
     const dividerLen = Math.max(
       node.name.length,
-      ...node.fields.map(f => f.name.length + f.type.length + 2)
+      ...allFields.map(f => col1 + f.type.length)
     );
     const divider = '\u2500'.repeat(dividerLen);
-    label = `${node.name}\n${divider}\n${fieldLines}`;
+
+    let sections = [`${node.name}\n${divider}`];
+    if (nonRelation.length) sections.push(nonRelation.map(renderField).join('\n'));
+    if (relation.length) {
+      if (nonRelation.length) sections.push(divider);
+      sections.push(relation.map(renderField).join('\n'));
+    }
+
+    label = sections.join('\n');
     shape = 'box';
-    font = { face: 'monospace', size: 11 };
+    font = { face: 'monospace', size: 11, align: 'left' };
   }
 
   let nodeData = {
@@ -61,6 +75,11 @@ const makeNode = (node, background, border, nodeModifiers, isExpanded) => {
   };
   if (shape) nodeData.shape = shape;
   if (font) nodeData.font = font;
+  if (pinnedPos) {
+    nodeData.x = pinnedPos.x;
+    nodeData.y = pinnedPos.y;
+    nodeData.physics = false;
+  }
 
   _.merge(nodeData, ...node.tags.map((tag) => nodeModifiers[tag]));
   return nodeData;
@@ -71,6 +90,10 @@ const makeNodeEdge = (edge, edgeModifiers) => {
     from: edge.source,
     to: edge.target,
   };
+  if (edge.label) {
+    edgeData.label = edge.label;
+    edgeData.font = { size: 10, align: 'middle' };
+  }
   _.merge(edgeData, ...edge.tags.map((tag) => edgeModifiers[tag]));
   return edgeData;
 };
@@ -94,6 +117,7 @@ export default {
   activeGroupIDs: new Set(),
   collapsedGroupIDs: new Set(),
   expandedFieldNodeIDs: new Set(),
+  pinnedNodes: {},
 
   // Toolbar.
   showAll: function () {
@@ -134,6 +158,12 @@ export default {
   },
   collapseAllFields: function () {
     this.expandedFieldNodeIDs.clear();
+    this.update();
+  },
+
+  // Pin node at a fixed position (after drag).
+  pinNode: function (nodeID, x, y) {
+    this.pinnedNodes[nodeID] = { x, y };
     this.update();
   },
 
@@ -192,7 +222,7 @@ export default {
       if (this.isNodeEnabled(nodeID)) {
         let group = this.allGroups[node.group];
         this.nodes.push(
-          makeNode(node, group.softColor, group.hardColor, this.nodeModifiers, this.expandedFieldNodeIDs.has(nodeID))
+          makeNode(node, group.softColor, group.hardColor, this.nodeModifiers, this.expandedFieldNodeIDs.has(nodeID), this.pinnedNodes[nodeID])
         );
       }
     });
