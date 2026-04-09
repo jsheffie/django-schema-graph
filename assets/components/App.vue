@@ -31,6 +31,15 @@
         </template>
         <span>Import configuration</span>
       </v-tooltip>
+
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on }">
+          <v-btn fab small v-on="on" @click="clearDialog = true">
+            <v-icon>mdi-broom</v-icon>
+          </v-btn>
+        </template>
+        <span>Clear configuration</span>
+      </v-tooltip>
     </div>
 
     <!-- Hidden file input for import -->
@@ -41,6 +50,21 @@
       style="display:none"
       @change="onImportFile"
     />
+
+    <!-- Clear config confirmation dialog -->
+    <v-dialog v-model="clearDialog" max-width="360">
+      <v-card>
+        <v-card-title>Clear configuration?</v-card-title>
+        <v-card-text>
+          This will reset all visibility, field expansion, node positions, and zoom to their defaults. This cannot be undone.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="clearDialog = false">Cancel</v-btn>
+          <v-btn color="error" text @click="confirmClear()">Clear</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Export name dialog -->
     <v-dialog v-model="exportDialog" max-width="360">
@@ -258,6 +282,11 @@ export default {
       URL.revokeObjectURL(url);
       this.exportDialog = false;
     },
+    confirmClear: function() {
+      graphData.resetConfig();
+      this.$nextTick(() => this.$refs.graph.resetViewport());
+      this.clearDialog = false;
+    },
     onImportFile: function(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -290,6 +319,7 @@ export default {
       helpDialog: false,
       exportDialog: false,
       exportName: 'schema-config',
+      clearDialog: false,
     }
   },
 };

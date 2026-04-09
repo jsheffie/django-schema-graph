@@ -222,6 +222,14 @@ export default {
     this.pinnedNodes = { ...(config.pinnedNodes || {}) };
     this.update();
   },
+  resetConfig: function () {
+    this.activeNodeIDs = new Set(Object.keys(this.allNodes));
+    this.activeGroupIDs = new Set(Object.keys(this.allGroups));
+    this.collapsedGroupIDs.clear();
+    this.expandedFieldNodeIDs.clear();
+    this.pinnedNodes = {};
+    this.update();
+  },
 
   // State queries.
   isNodeEnabled: function (nodeID) {

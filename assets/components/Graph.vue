@@ -90,6 +90,10 @@ export default {
         position: viewState.position,
       });
     },
+    resetViewport: function () {
+      const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
+      if (net) net.fit();
+    },
   },
 };
 </script>
