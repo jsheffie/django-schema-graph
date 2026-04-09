@@ -8,11 +8,18 @@ from django.db import models
 
 
 @attrs.frozen(order=True)
+class Field:
+    name: str
+    type: str
+
+
+@attrs.frozen(order=True)
 class Node:
     id: str
     name: str
     group: str
     tags: tuple[str, ...] = ()
+    fields: tuple[Field, ...] = ()
 
     @classmethod
     def from_model(cls, model: type[models.Model]) -> Node:
@@ -21,11 +28,17 @@ class Node:
             tags.append("proxy")
         if model._meta.abstract:
             tags.append("abstract")
+        fields = tuple(
+            Field(name=f.name, type=type(f).__name__)
+            for f in model._meta.get_fields()
+            if not f.is_relation and hasattr(f, "name")
+        )
         return cls(
             id=get_model_id(model),
             name=model.__name__,
             group=get_app_name(model),
             tags=tuple(tags),
+            fields=fields,
         )
 
 

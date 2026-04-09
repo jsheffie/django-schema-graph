@@ -6,6 +6,7 @@
     <Graph
       class="graph"
       :completeLoad=completeLoad
+      @node-click="onNodeClick"
     />
     <vue-progress-bar></vue-progress-bar>
   </v-app>
@@ -46,7 +47,10 @@ export default {
   methods: {
     completeLoad: function() {
       this.loaded = true;
-    }
+    },
+    onNodeClick: function(nodeID) {
+      graphData.toggleNodeFields(nodeID);
+    },
   },
   data() {
     let loaded = false;

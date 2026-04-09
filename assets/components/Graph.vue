@@ -5,6 +5,7 @@
     :options=options
     @stabilization-progress="stabilizationProgress"
     @stabilization-iterations-done="stabilizationIterationsDone"
+    @click="onNetworkClick"
   />
 </template>
 
@@ -41,7 +42,12 @@ export default {
       console.log('Stabilization complete');
       this.$Progress.finish();
       this.completeLoad();
-    }
+    },
+    onNetworkClick: function (event) {
+      if (event.nodes && event.nodes.length === 1) {
+        this.$emit('node-click', event.nodes[0]);
+      }
+    },
   },
 };
 </script>

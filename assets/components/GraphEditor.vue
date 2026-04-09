@@ -63,6 +63,24 @@
             </template>
             <span>Unfold all</span>
           </v-tooltip>
+          <v-spacer></v-spacer>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on }">
+              <v-btn small v-on="on" @click="expandAllFields">
+                <v-icon>mdi-table-plus</v-icon>
+              </v-btn>
+            </template>
+            <span>Expand all fields</span>
+          </v-tooltip>
+          <v-spacer></v-spacer>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on }">
+              <v-btn small v-on="on" @click="collapseAllFields">
+                <v-icon>mdi-table-minus</v-icon>
+              </v-btn>
+            </template>
+            <span>Collapse all fields</span>
+          </v-tooltip>
         </v-toolbar>
 
         <v-list expand dense>
@@ -198,6 +216,12 @@ export default {
       } else {
         graphData.enableNode(nodeID);
       }
+    },
+    expandAllFields: function () {
+      graphData.expandAllFields();
+    },
+    collapseAllFields: function () {
+      graphData.collapseAllFields();
     },
   },
 };

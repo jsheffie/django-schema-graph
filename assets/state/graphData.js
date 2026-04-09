@@ -16,7 +16,7 @@ const makeGroupNode = (group) => {
   }
 };
 
-const makeNode = (node, background, border, nodeModifiers) => {
+const makeNode = (node, background, border, nodeModifiers, isExpanded) => {
   let title = `
     <dl style="display: grid; grid-template-columns: auto auto; grid-auto-columns: 1fr; gap: 5px .5em; align-items: baseline;">
       <dt style="text-align: right">name:</dt>
@@ -36,15 +36,32 @@ const makeNode = (node, background, border, nodeModifiers) => {
     title += '</dd>';
   }
   title += '</dl>';
+
+  let label = node.name;
+  let shape = undefined;
+  let font = undefined;
+
+  if (isExpanded && node.fields && node.fields.length) {
+    const fieldLines = node.fields.map(f => `${f.name}  ${f.type}`).join('\n');
+    const dividerLen = Math.max(
+      node.name.length,
+      ...node.fields.map(f => f.name.length + f.type.length + 2)
+    );
+    const divider = '\u2500'.repeat(dividerLen);
+    label = `${node.name}\n${divider}\n${fieldLines}`;
+    shape = 'box';
+    font = { face: 'monospace', size: 11 };
+  }
+
   let nodeData = {
     id: node.id,
-    label: node.name,
-    title: title,
-    color: {
-      background,
-      border,
-    },
-  }
+    label,
+    title,
+    color: { background, border },
+  };
+  if (shape) nodeData.shape = shape;
+  if (font) nodeData.font = font;
+
   _.merge(nodeData, ...node.tags.map((tag) => nodeModifiers[tag]));
   return nodeData;
 };
@@ -76,6 +93,7 @@ export default {
   activeNodeIDs: new Set(),
   activeGroupIDs: new Set(),
   collapsedGroupIDs: new Set(),
+  expandedFieldNodeIDs: new Set(),
 
   // Toolbar.
   showAll: function () {
@@ -96,6 +114,26 @@ export default {
     Object.keys(this.allGroups).map((groupID) => {
       this.collapsedGroupIDs.add(groupID)
     });
+    this.update();
+  },
+
+  // Field expansion.
+  toggleNodeFields: function (nodeID) {
+    if (this.expandedFieldNodeIDs.has(nodeID)) {
+      this.expandedFieldNodeIDs.delete(nodeID);
+    } else {
+      this.expandedFieldNodeIDs.add(nodeID);
+    }
+    this.update();
+  },
+  expandAllFields: function () {
+    Object.keys(this.allNodes).forEach((nodeID) => {
+      this.expandedFieldNodeIDs.add(nodeID);
+    });
+    this.update();
+  },
+  collapseAllFields: function () {
+    this.expandedFieldNodeIDs.clear();
     this.update();
   },
 
@@ -154,7 +192,7 @@ export default {
       if (this.isNodeEnabled(nodeID)) {
         let group = this.allGroups[node.group];
         this.nodes.push(
-          makeNode(node, group.softColor, group.hardColor, this.nodeModifiers)
+          makeNode(node, group.softColor, group.hardColor, this.nodeModifiers, this.expandedFieldNodeIDs.has(nodeID))
         );
       }
     });
