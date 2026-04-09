@@ -66,6 +66,14 @@ export default {
       const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
       if (net) net.stabilize(150);
     },
+    zoomIn: function () {
+      const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
+      if (net) net.moveTo({ scale: net.getScale() * 1.15 });
+    },
+    zoomOut: function () {
+      const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
+      if (net) net.moveTo({ scale: net.getScale() / 1.15 });
+    },
   },
 };
 </script>
