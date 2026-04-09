@@ -7,6 +7,26 @@ Version numbers should follow https://semver.org/spec/v2.0.0.html
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-04-09
+
+### Added
+
+- Expandable ER-diagram nodes: clicking a model node expands it to show all fields
+  with their types, split into non-relation and relation sections.
+- Edge labels show the field name; hovering shows type, field name, and reverse name.
+- Drag-to-pin: dragging a node fixes it at that position and re-stabilizes the graph.
+- Zoom in / zoom out buttons in the bottom-right corner (~15% per click).
+- Help dialog (bottom-right) documenting all user interactions.
+- Export configuration: saves current visibility, field expansion, node positions,
+  and viewport zoom/pan as a named JSON file.
+- Import configuration: loads a previously exported JSON file to restore that layout,
+  allowing one user to share an exact graph view with another.
+- Clear configuration button (top-right) with confirmation dialog — resets all
+  visibility, field expansion, node positions, and zoom to defaults.
+- Ability to view all schema model/table attribute details interactively in the graph.
+- `docs/how-to-deploy.md` — instructions for releasing and installing this fork
+  without a PyPI publish.
+
 ## [3.1.0] - 2023-05-15
 
 ### Added
