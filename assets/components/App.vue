@@ -12,6 +12,56 @@
     />
     <vue-progress-bar></vue-progress-bar>
 
+    <!-- Top-right controls: export / import -->
+    <div class="top-right-controls">
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on }">
+          <v-btn fab small v-on="on" @click="startExport()">
+            <v-icon>mdi-download</v-icon>
+          </v-btn>
+        </template>
+        <span>Export configuration</span>
+      </v-tooltip>
+
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on }">
+          <v-btn fab small v-on="on" @click="$refs.importFile.click()">
+            <v-icon>mdi-upload</v-icon>
+          </v-btn>
+        </template>
+        <span>Import configuration</span>
+      </v-tooltip>
+    </div>
+
+    <!-- Hidden file input for import -->
+    <input
+      ref="importFile"
+      type="file"
+      accept=".json"
+      style="display:none"
+      @change="onImportFile"
+    />
+
+    <!-- Export name dialog -->
+    <v-dialog v-model="exportDialog" max-width="360">
+      <v-card>
+        <v-card-title>Export configuration</v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="exportName"
+            label="Configuration name"
+            autofocus
+            @keyup.enter="confirmExport()"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="exportDialog = false">Cancel</v-btn>
+          <v-btn color="primary" text @click="confirmExport()">Download</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Bottom-right controls -->
     <div class="bottom-right-controls">
       <v-tooltip left>
@@ -54,6 +104,14 @@
             <tbody>
               <tr><td>Scroll wheel / trackpad pinch</td><td>Zoom in and out</td></tr>
               <tr><td>Click + drag canvas</td><td>Pan around the graph</td></tr>
+            </tbody>
+          </v-simple-table>
+
+          <p class="subtitle-1 mt-4 mb-1"><strong>Export / Import (top-right)</strong></p>
+          <v-simple-table dense>
+            <tbody>
+              <tr><td><v-icon small>mdi-download</v-icon> Export</td><td>Save the current graph layout (visibility, positions, zoom) as a named JSON file</td></tr>
+              <tr><td><v-icon small>mdi-upload</v-icon> Import</td><td>Load a previously exported configuration file to restore that layout</td></tr>
             </tbody>
           </v-simple-table>
 
@@ -139,6 +197,15 @@
   .graph {
     height: 100vh;
   }
+  .top-right-controls {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    z-index: 10;
+  }
   .bottom-right-controls {
     position: fixed;
     bottom: 16px;
@@ -170,6 +237,49 @@ export default {
     onNodeDragged: function({ nodeId, x, y }) {
       graphData.pinNode(nodeId, x, y);
     },
+    startExport: function() {
+      this.exportName = 'schema-config';
+      this.exportDialog = true;
+    },
+    confirmExport: function() {
+      const config = {
+        version: 1,
+        name: this.exportName,
+        exportedAt: new Date().toISOString(),
+        viewport: this.$refs.graph.getViewState(),
+        ...graphData.getConfig(),
+      };
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${this.exportName.replace(/\s+/g, '-').toLowerCase()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.exportDialog = false;
+    },
+    onImportFile: function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const config = JSON.parse(e.target.result);
+          if (config.version !== 1) {
+            alert('Unsupported configuration version.');
+            return;
+          }
+          graphData.applyConfig(config);
+          if (config.viewport) {
+            this.$nextTick(() => this.$refs.graph.setViewState(config.viewport));
+          }
+        } catch {
+          alert('Could not read configuration file. Make sure it is a valid JSON export.');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    },
   },
   data() {
     let loaded = false;
@@ -178,6 +288,8 @@ export default {
     return {
       loaded,
       helpDialog: false,
+      exportDialog: false,
+      exportName: 'schema-config',
     }
   },
 };

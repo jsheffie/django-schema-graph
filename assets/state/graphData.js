@@ -204,6 +204,25 @@ export default {
     this.update();
   },
 
+  // Config export / import.
+  getConfig: function () {
+    return {
+      activeNodes: [...this.activeNodeIDs],
+      activeGroups: [...this.activeGroupIDs],
+      collapsedGroups: [...this.collapsedGroupIDs],
+      expandedFields: [...this.expandedFieldNodeIDs],
+      pinnedNodes: { ...this.pinnedNodes },
+    };
+  },
+  applyConfig: function (config) {
+    this.activeNodeIDs = new Set(config.activeNodes || []);
+    this.activeGroupIDs = new Set(config.activeGroups || []);
+    this.collapsedGroupIDs = new Set(config.collapsedGroups || []);
+    this.expandedFieldNodeIDs = new Set(config.expandedFields || []);
+    this.pinnedNodes = { ...(config.pinnedNodes || {}) };
+    this.update();
+  },
+
   // State queries.
   isNodeEnabled: function (nodeID) {
     let node = this.allNodes[nodeID];

@@ -74,6 +74,22 @@ export default {
       const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
       if (net) net.moveTo({ scale: net.getScale() / 1.15 });
     },
+    getViewState: function () {
+      const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
+      if (!net) return null;
+      return {
+        scale: net.getScale(),
+        position: net.getViewPosition(),
+      };
+    },
+    setViewState: function (viewState) {
+      const net = this.$refs.visNetwork && this.$refs.visNetwork.network;
+      if (!net || !viewState) return;
+      net.moveTo({
+        scale: viewState.scale,
+        position: viewState.position,
+      });
+    },
   },
 };
 </script>
